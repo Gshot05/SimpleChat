@@ -6,7 +6,6 @@ import (
 	"gochat/server/models"
 	"log"
 	"net/http"
-	"strings"
 
 	"github.com/gorilla/websocket"
 )
@@ -33,32 +32,19 @@ func NewHub() *HubManager {
 	}
 }
 
-func (h *HubManager) broadcastClients() {
-	// Формируем список имен подключенных клиентов
-	var clientList []string
-	for client := range h.Hub.Clients {
-		clientList = append(clientList, client.Name)
-	}
-
-	// Отправляем этот список всем подключенным клиентам
-	for client := range h.Hub.Clients {
-		go func(c *models.Client) {
-			c.Send <- []byte("users:" + strings.Join(clientList, ","))
-		}(client)
-	}
-}
-
 func (h *HubManager) Run() {
 	for {
 		select {
 		case client := <-h.Hub.Register:
 			h.Hub.Clients[client] = true
-			h.broadcastClients() // Отправляем обновленный список клиентов
+			onlineHandler := internal.NewOnlinehandler(client, h.Hub) // Используем новый OnlineHandler
+			onlineHandler.BroadcastClients()                          // Отправляем обновленный список клиентов
 		case client := <-h.Hub.Unregister:
 			if _, ok := h.Hub.Clients[client]; ok {
 				delete(h.Hub.Clients, client)
 				close(client.Send)
-				h.broadcastClients() // Отправляем обновленный список клиентов
+				onlineHandler := internal.NewOnlinehandler(client, h.Hub) // Используем новый OnlineHandler
+				onlineHandler.BroadcastClients()                          // Отправляем обновленный список клиентов
 			}
 		case message := <-h.Hub.Broadcast:
 			for client := range h.Hub.Clients {
@@ -93,7 +79,7 @@ func serveWS(hub *models.Hub, w http.ResponseWriter, r *http.Request) {
 }
 
 func serveChatPage(w http.ResponseWriter, r *http.Request) {
-	http.ServeFile(w, r, "../../static/index.html") // Убедись, что путь к файлу правильный
+	http.ServeFile(w, r, "static/index.html")
 }
 
 func SetupRoutes(hubManager *HubManager) {
