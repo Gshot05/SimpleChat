@@ -37,14 +37,14 @@ func (h *HubManager) Run() {
 		select {
 		case client := <-h.Hub.Register:
 			h.Hub.Clients[client] = true
-			onlineHandler := internal.NewOnlinehandler(client, h.Hub) // Используем новый OnlineHandler
-			onlineHandler.BroadcastClients()                          // Отправляем обновленный список клиентов
+			onlineHandler := internal.NewOnlinehandler(client, h.Hub) 
+			onlineHandler.BroadcastClients()                          
 		case client := <-h.Hub.Unregister:
 			if _, ok := h.Hub.Clients[client]; ok {
 				delete(h.Hub.Clients, client)
 				close(client.Send)
-				onlineHandler := internal.NewOnlinehandler(client, h.Hub) // Используем новый OnlineHandler
-				onlineHandler.BroadcastClients()                          // Отправляем обновленный список клиентов
+				onlineHandler := internal.NewOnlinehandler(client, h.Hub) 
+				onlineHandler.BroadcastClients()                          
 			}
 		case message := <-h.Hub.Broadcast:
 			for client := range h.Hub.Clients {
